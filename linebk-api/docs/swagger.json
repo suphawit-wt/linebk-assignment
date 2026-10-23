@@ -1,0 +1,33 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "Banking Service handling secure authentication, authorization and core banking operations.",
+        "title": "Banking Service - LINE BK API",
+        "termsOfService": "https://linebk.com/terms/",
+        "contact": {
+            "name": "Engineering Team at KASIKORN LINE Co., Ltd.",
+            "url": "https://linebk.com/engineering",
+            "email": "engineering@linebk.com"
+        },
+        "license": {
+            "name": "Copyright © KASIKORN LINE All Rights reserved",
+            "url": "https://linebk.com/licenses"
+        },
+        "version": "1.0.0"
+    },
+    "host": "localhost:8080",
+    "basePath": "/",
+    "paths": {},
+    "securityDefinitions": {
+        "Bearer": {
+            "description": "Put **_ONLY_** your JWT Bearer token in textbox below",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
+    },
+    "externalDocs": {
+        "description": "OpenAPI",
+        "url": "https://swagger.io/resources/open-api/"
+    }
+}

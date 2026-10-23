@@ -1,0 +1,22 @@
+{
+  "name": "linebk-assignment",
+  "version": "1.0.0",
+  "private": true,
+  "description": "LINE BK - Assignment",
+  "author": "LINE BK Engineering Team",
+  "commitlint": {
+    "extends": [
+      "@commitlint/config-conventional"
+    ]
+  },
+  "config": {
+    "commitizen": {
+      "path": "cz-conventional-changelog"
+    }
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^21.2.3",
+    "@commitlint/config-conventional": "^21.2.3",
+    "cz-conventional-changelog": "^3.3.0"
+  }
+}

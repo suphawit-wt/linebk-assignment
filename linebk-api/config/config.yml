@@ -1,0 +1,35 @@
+app:
+  name: Banking Service - LINE BK API
+  description: |
+    Banking Service handling secure authentication, authorization, 
+    and core banking operations.
+
+    Authentication:
+    Use Bearer Token in Authorization header.
+
+    Example:
+    Authorization: Bearer <your_token>
+  version: '1.0.0'
+
+auth:
+  access_ttl: 5m
+  refresh_ttl: 72h
+
+security:
+  cors:
+    allowed_methods:
+      - GET
+      - POST
+      - PUT
+      - PATCH
+      - DELETE
+      - OPTIONS
+    allowed_headers:
+      - Origin
+      - Content-Type
+      - Authorization
+    exposed_headers:
+      - Content-Length
+      - Retry-After
+    allow_credentials: true
+    max_age: 3600

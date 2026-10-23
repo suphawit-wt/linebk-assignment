@@ -1,0 +1,14 @@
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  entrypoint = ["./tmp/main"]
+  cmd = "go build -o ./tmp/main ./cmd/http/main.go"
+  delay = 1000
+  exclude_dir = ["tmp", "vendor"]
+  include_ext = ["go"]
+  poll = true
+  poll_interval = 500 # milliseconds
+
+[misc]
+  clean_on_exit = true

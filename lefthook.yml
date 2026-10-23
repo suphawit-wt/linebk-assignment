@@ -1,0 +1,30 @@
+colors: true
+
+pre-commit:
+  parallel: true
+  commands:
+    golangci-lint-fix:
+      tags: go lint
+      root: "linebk-api"
+      glob: "*.go"
+      run: |
+        echo {staged_files} | xargs -n1 dirname | sort -u | xargs -I {} golangci-lint run --fix {}
+      stage_fixed: true
+
+pre-push:
+  parallel: true
+  commands:
+    go-lint-full:
+      tags: go lint
+      root: "linebk-api"
+      run: golangci-lint run ./...
+
+    go-test:
+      tags: go test
+      root: "linebk-api"
+      run: go test -race -short ./...
+
+commit-msg:
+  commands:
+    commitlint:
+      run: npx commitlint --edit {1}

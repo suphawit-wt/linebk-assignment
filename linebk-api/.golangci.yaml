@@ -1,0 +1,148 @@
+version: "2"
+
+run:
+  timeout: 5m
+  modules-download-mode: readonly
+  concurrency: 4
+
+formatters:
+  enable:
+    # --- Uber Style & Formatting (The "Spotless" Layer) ---
+    - gofumpt      # Stricter than gofmt, follows Uber/OpenSource standards
+    - gci          # Enforces deterministic import grouping (Standard, 3rd-party, Local)
+    - golines      # Enforces line length limits (Uber prefers 100)
+    - swaggo       # Formats Swagger annotations in comments
+  settings:
+    gofumpt:
+      extra:
+        group-params: true # Enforces additional parameter grouping rules
+        balance-calls: true # Enforces clean multi-line function call formatting
+    gci:
+      sections:
+        - standard
+        - default
+        - prefix(github.com/suphawit-wt) # Treat imports from these packages as "local"
+      custom-order: true
+    golines:
+      max-len: 100 # Uber's preferred max line length
+
+linters:
+  default: none
+  enable:
+    # --- Logic & Reliability ---
+    - errcheck      # Ensures errors aren't ignored
+    - govet         # Reports suspicious constructs
+    - staticcheck   # The most advanced static analysis for Go
+    - ineffassign   # Detects ineffectual assignments
+    - nilerr        # Checks for returning nil when you should return an error
+    - nilnil         # Prevents returning (nil, nil)
+    - asasalint     # Checks for correct usage of any[] in variadic functions
+    - forcetypeassert # Detects unchecked type assertions
+
+    # --- Resource Management ---
+    - bodyclose     # Prevents HTTP response body memory leaks
+    - sqlclosecheck # Ensures SQL rows and statements are closed
+    - rowserrcheck  # Checks for errors after iterating SQL rows
+    - contextcheck  # Checks for correct context inheritance
+    - noctx         # Ensures http.Requests are created with a context
+
+    # --- Security ---
+    - gosec         # Security checks for common vulnerabilities
+    
+    # --- Code Quality & Maintainability ---
+    - revive        # Highly configurable style linter
+    - gocritic      # Opinionated checks for better code
+    - goconst       # Finds repeated strings that should be constants
+    - unparam       # Finds unused function parameters
+    - nakedret      # Prevent naked returns in long functions (Uber specific)
+    - importas     # Enforces import aliasing for specific packages (e.g., "log" as "logrus")
+    - forbidigo   # Forbids usage of specific functions (e.g., fmt.Printf in production code)
+    - gocognit     # Measures code complexity and cognitive load
+    - exhaustive   # Checks for exhaustive handling of enums and error types
+    - gochecknoglobals # Detects global variables which can lead to hidden state and concurrency issues
+    - gochecknoinits  # Detects init() functions which can lead to hidden initialization logic
+
+    # --- Testing & Documentation ---
+    - paralleltest   # Forces 't.Parallel()' to keep CI pipelines fast
+    - testableexamples # Ensures your documentation code actually compiles
+
+    # --- Style & Conventions ---
+    - whitespace   # Enforces consistent spacing
+    - misspell     # Corrects English spelling
+    - tagliatelle  # Enforces JSON/YAML tag naming (camelCase)
+    
+    # --- Performance ---
+    - prealloc      # Suggests slice pre-allocation
+    - makezero      # Finds slices initialized with non-zero length then appended
+
+  # v2 uses 'exclusions' to handle paths and specific rule ignores
+  exclusions:
+    paths:
+      - docs/.* # Ignore your Swagger generated documentation
+      - vendor/.*
+      - bin/.*
+      - traefik/.*
+      - terraform/.*
+      - vault/.*
+      
+    rules:
+      - path: _mock\.go
+        linters:
+          - forcetypeassert
+          - revive
+      - path: _test\.go
+        linters:
+          - errcheck
+          - goconst
+          - govet
+      - path: main\.go$
+        linters:
+          - swaggo
+
+  # Linter-specific configurations
+  settings:
+    govet:
+      enable:
+        - shadow         # Warns when a variable shadows another
+      disable:
+        - fieldalignment # Uber often prioritizes logical field grouping over memory savings
+    gosec:
+      severity: medium
+      confidence: medium
+      excludes:
+        - G104 # duplicate with errcheck
+        - G304 # file inclusion false positives
+    gocognit:
+      min-complexity: 15
+    revive:
+      confidence: 0.8
+      rules:
+        - name: exported
+          severity: warning
+        - name: package-comments
+          disabled: true
+        - name: var-naming
+          severity: warning
+          arguments: 
+            - ["ID", "URL", "IP", "HTTP", "JSON", "API"] # Enforce UserID over UserId
+            - [] # No excluded names
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - style
+        - performance
+      settings:
+        hugeParam:
+          sizeThreshold: 80 # Warns when passing large structs by value (>80 bytes)
+    tagliatelle:
+      case:
+        use-field-name: true
+        rules:
+          json: camel
+          yaml: camel
+          mapstructure: snake
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  new: false # Check the whole codebase, not just new changes

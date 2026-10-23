@@ -1,0 +1,120 @@
+services:
+  db:
+    container_name: linebk-db
+    image: mysql:9.7
+    restart: unless-stopped
+    volumes:
+      - db-data:/var/lib/mysql
+      - ./db-init:/docker-entrypoint-initdb.d
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: "1024M"
+    networks:
+      - linebk-net
+    healthcheck:
+      test: ["CMD-SHELL", "cat /var/log/mysql/general.log 2>/dev/null | grep -q 'MySQL init process done' || mysqladmin ping -h localhost -u root -p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      retries: 120
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:5.2
+    container_name: linebk-phpmyadmin
+    restart: unless-stopped
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      UPLOAD_LIMIT: 300M
+    ports:
+      - "8081:80"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "256M"
+    networks:
+      - linebk-net
+    depends_on:
+      db:
+        condition: service_healthy
+
+  redis:
+    container_name: linebk-redis
+    image: redis:7
+    restart: unless-stopped
+    ports:
+      - 6379:6379
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    command: /bin/sh -c "redis-server --requirepass $$REDIS_PASSWORD"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: "128M"
+    networks:
+      - linebk-net
+
+  vault:
+    container_name: linebk-vault
+    image: hashicorp/vault:2.2
+    ports:
+      - "8200:8200"
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: "root"
+      VAULT_DEV_LISTEN_ADDRESS: "0.0.0.0:8200"
+      VAULT_UI: true
+    cap_add:
+      - IPC_LOCK
+    volumes:
+      - "vault-data:/vault/data"
+      - "./vault/secrets:/vault/secrets:ro"
+      - "./vault/vault-init.sh:/vault-init.sh"
+    command: /bin/sh -c "/vault-init.sh & vault server -dev"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "256M"
+    networks:
+      - linebk-net
+
+  api:
+    container_name: linebk-api
+    build:
+      context: linebk-api
+      dockerfile: Dockerfile.dev
+    image: linebk-api-dev:latest
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./linebk-api:/app
+    env_file:
+      - linebk-api/.env
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - linebk-net
+
+volumes:
+  db-data:
+    name: linebk-db-data
+  vault-data:
+    name: linebk-vault-data
+
+networks:
+  linebk-net:
+    name: linebk-net
+    driver: bridge
+    ipam:
+      config:
+        - subnet: "172.70.0.0/16"
+          gateway: "172.70.0.1"
