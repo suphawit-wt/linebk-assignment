@@ -28,6 +28,10 @@ type Service interface {
 		ctx context.Context,
 		userID, passcode, ipAddress, userAgent string,
 	) (*Token, error)
+	SignInWithPassword(
+		ctx context.Context,
+		userID, passcode, ipAddress, userAgent string,
+	) (*Token, error)
 }
 
 type service struct {
@@ -84,6 +88,53 @@ func (s *service) SignInWithPasscode(
 	if err := s.validateUserPasscode(
 		u,
 		passcode,
+		ipAddress,
+		userAgent,
+		logger,
+	); err != nil {
+		return nil, err
+	}
+
+	keys := KeyPair{
+		AccessPrivateKey:  s.jwtKeys.User.Access.Private,
+		RefreshPrivateKey: s.jwtKeys.User.Refresh.Private,
+	}
+
+	return s.createSessionAndTokens(
+		ctx,
+		u,
+		keys,
+		1,
+		ipAddress,
+		userAgent,
+		logger,
+	)
+}
+
+func (s *service) SignInWithPassword(
+	ctx context.Context,
+	userID, password, ipAddress, userAgent string,
+) (*Token, error) {
+	logger := s.logger.Named("signin_with_password")
+
+	u, err := s.userRepo.GetUserByUserID(ctx, userID)
+	if err != nil {
+		if errors.Is(err, user.ErrUserNotFound) {
+			logger.Warn("user sign-in failed: credential not found",
+				zap.String("identifier", userID),
+				zap.String("event", "auth.signin.password.failed"),
+			)
+
+			return nil, errs.NewUnauthorizedError("Invalid user id or password.")
+		}
+
+		return nil, err
+	}
+
+	if err := s.validateUserPassword(
+		u,
+		password,
+		userID,
 		ipAddress,
 		userAgent,
 		logger,

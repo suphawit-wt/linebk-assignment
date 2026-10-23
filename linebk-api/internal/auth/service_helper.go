@@ -60,6 +60,45 @@ func (s *service) validateUserPasscode(
 	return nil
 }
 
+func (s *service) validateUserPassword(
+	u *user.User,
+	password, identifier, ipAddress, userAgent string,
+	logger *zaplog.Logger,
+) error {
+	if !u.PasswordHash.Valid {
+		logger.Warn(
+			"user sign-in failed: account has no password set",
+			zap.String("user_id", u.UserID),
+			zap.String("identifier", identifier),
+			zap.String("ip_address", ipAddress),
+		)
+		return errs.NewUnauthorizedError("Invalid user id or password.")
+	}
+
+	verified, err := s.passwordEncoder.Verify(u.PasswordHash.String, password)
+	if err != nil {
+		logger.Error(
+			"failed to execute password verification",
+			zap.String("user_id", u.UserID),
+			zap.Error(err),
+		)
+		return fmt.Errorf("auth_service.SignInWithPassword: %w", err)
+	}
+
+	if !verified {
+		logger.Warn(
+			"user sign-in failed: invalid password provided",
+			zap.String("user_id", u.UserID),
+			zap.String("identifier", identifier),
+			zap.String("ip_address", ipAddress),
+			zap.String("user_agent", userAgent),
+		)
+		return errs.NewUnauthorizedError("Invalid user id or password.")
+	}
+
+	return nil
+}
+
 func (s *service) createSessionAndTokens(
 	ctx context.Context,
 	u *user.User,
