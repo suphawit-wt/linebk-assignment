@@ -55,3 +55,18 @@ func (mr *MockRepositoryMockRecorder) GetUserByUserID(ctx, userID any) *gomock.C
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserByUserID", reflect.TypeOf((*MockRepository)(nil).GetUserByUserID), ctx, userID)
 }
+
+// GetUserInfo mocks base method.
+func (m *MockRepository) GetUserInfo(ctx context.Context, userID string) (*user.Info, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetUserInfo", ctx, userID)
+	ret0, _ := ret[0].(*user.Info)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetUserInfo indicates an expected call of GetUserInfo.
+func (mr *MockRepositoryMockRecorder) GetUserInfo(ctx, userID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserInfo", reflect.TypeOf((*MockRepository)(nil).GetUserInfo), ctx, userID)
+}
