@@ -15,6 +15,7 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/suphawit-wt/linebk-assignment/linebk-api/internal/auth"
+	"github.com/suphawit-wt/linebk-assignment/linebk-api/internal/session"
 	sessionMocks "github.com/suphawit-wt/linebk-assignment/linebk-api/internal/session/mocks"
 	"github.com/suphawit-wt/linebk-assignment/linebk-api/internal/user"
 	userMocks "github.com/suphawit-wt/linebk-assignment/linebk-api/internal/user/mocks"
@@ -22,6 +23,7 @@ import (
 	"github.com/suphawit-wt/linebk-assignment/linebk-api/pkg/go-libs/security/jwt"
 	jwtMocks "github.com/suphawit-wt/linebk-assignment/linebk-api/pkg/go-libs/security/jwt/mocks"
 	passwdMocks "github.com/suphawit-wt/linebk-assignment/linebk-api/pkg/go-libs/security/passwd/mocks"
+	"github.com/suphawit-wt/linebk-assignment/linebk-api/pkg/go-libs/security/secret"
 	"github.com/suphawit-wt/linebk-assignment/linebk-api/pkg/go-libs/zaplog"
 	"github.com/suphawit-wt/linebk-assignment/linebk-api/pkg/shared/jwtkey"
 )
@@ -431,6 +433,147 @@ func TestService_SignOut(t *testing.T) {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestService_RotateTokens(t *testing.T) {
+	t.Parallel()
+
+	logger := zaplog.NewNop()
+	sampleRefreshToken := "valid.refresh.token"
+	sampleAccountID := "user-uuid-12345"
+	sampleSessionID := "session-uuid-98765"
+	samplePublicKey := &rsa.PublicKey{}
+	clientType := auth.ClientTypeUser
+	clientKey := strings.ToLower(clientType.String())
+
+	jwtKeys := &jwtkey.Keys{
+		User: jwtkey.UserTokens{
+			Access:  jwtkey.KeyPair{Private: &rsa.PrivateKey{}},
+			Refresh: jwtkey.KeyPair{Private: &rsa.PrivateKey{}, Public: samplePublicKey},
+		},
+	}
+
+	sampleClaims := &jwt.AuthClaims{
+		RegisteredClaims: gojwt.RegisteredClaims{
+			Subject: sampleAccountID,
+			ID:      sampleSessionID,
+		},
+		Email: "test@example.com",
+		Roles: []string{"USER"},
+	}
+
+	expectedSessionKey := fmtKey(clientKey, sampleAccountID, "session", sampleSessionID)
+	expectedAccSessionsKey := fmtKey(clientKey, sampleAccountID, "sessions", "")
+
+	sampleMetadata := &session.Metadata{
+		SessionID: sampleSessionID,
+		TokenHash: secret.HashToken(sampleRefreshToken),
+	}
+
+	testCases := []struct {
+		name          string
+		refreshToken  string
+		mockSetup     func(mJwt *jwtMocks.MockService, mSessionRepo *sessionMocks.MockRepository)
+		expectedError bool
+	}{
+		{
+			name:         "Success - Rotate Tokens",
+			refreshToken: sampleRefreshToken,
+			mockSetup: func(mJwt *jwtMocks.MockService, mSessionRepo *sessionMocks.MockRepository) {
+				mJwt.EXPECT().
+					VerifyRS256(sampleRefreshToken, samplePublicKey).
+					Return(sampleClaims, nil).
+					Times(1)
+
+				mSessionRepo.EXPECT().
+					GetMetadata(gomock.Any(), expectedSessionKey).
+					Return(sampleMetadata, nil).
+					Times(1)
+
+				mJwt.EXPECT().
+					SignRS256(sampleAccountID, sampleSessionID, "test@example.com", gomock.Any(), clientType.String(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return("new.access.token", nil).
+					Times(1)
+
+				mJwt.EXPECT().
+					SignRS256(sampleAccountID, sampleSessionID, "test@example.com", gomock.Any(), clientType.String(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return("new.refresh.token", nil).
+					Times(1)
+
+				mSessionRepo.EXPECT().
+					Create(gomock.Any(), sampleSessionID, expectedSessionKey, expectedAccSessionsKey, gomock.Any(), gomock.Any()).
+					Return(nil).
+					Times(1)
+			},
+			expectedError: false,
+		},
+		{
+			name:         "Failure - Invalid Refresh Token Signature",
+			refreshToken: "bad.token",
+			mockSetup: func(mJwt *jwtMocks.MockService, mSessionRepo *sessionMocks.MockRepository) {
+				mJwt.EXPECT().
+					VerifyRS256("bad.token", samplePublicKey).
+					Return(nil, errors.New("invalid signature")).
+					Times(1)
+			},
+			expectedError: true,
+		},
+		{
+			name:         "Failure - Session Not Found or Revoked",
+			refreshToken: sampleRefreshToken,
+			mockSetup: func(mJwt *jwtMocks.MockService, mSessionRepo *sessionMocks.MockRepository) {
+				mJwt.EXPECT().
+					VerifyRS256(sampleRefreshToken, samplePublicKey).
+					Return(sampleClaims, nil).
+					Times(1)
+
+				mSessionRepo.EXPECT().
+					GetMetadata(gomock.Any(), expectedSessionKey).
+					Return(nil, session.ErrTokenNotFound).
+					Times(1)
+			},
+			expectedError: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mJwt := jwtMocks.NewMockService(ctrl)
+			mSessionRepo := sessionMocks.NewMockRepository(ctrl)
+
+			if tc.mockSetup != nil {
+				tc.mockSetup(mJwt, mSessionRepo)
+			}
+
+			svc := auth.NewService(
+				logger,
+				&config.AuthConfig{},
+				mJwt,
+				jwtKeys,
+				nil,
+				nil,
+				mSessionRepo,
+			)
+
+			tokens, err := svc.RotateTokens(context.Background(), tc.refreshToken)
+
+			if tc.expectedError {
+				require.Error(t, err)
+				assert.Nil(t, tokens)
+			} else {
+				require.NoError(t, err)
+				assert.NotNil(t, tokens)
+				assert.NotEmpty(t, tokens.AccessToken)
+				assert.NotEmpty(t, tokens.RefreshToken)
 			}
 		})
 	}
