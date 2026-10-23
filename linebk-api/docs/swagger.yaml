@@ -1,5 +1,44 @@
 basePath: /
 definitions:
+  account.ApiResponse:
+    properties:
+      message:
+        type: string
+      status:
+        type: string
+      statusCode:
+        type: integer
+    type: object
+  account.ApiResponseWithData:
+    properties:
+      status:
+        type: string
+      statusCode:
+        type: integer
+    type: object
+  account.InfoResponse:
+    properties:
+      accountNumber:
+        type: string
+      amount:
+        type: string
+      color:
+        type: string
+      currency:
+        type: string
+      flags:
+        items:
+          type: string
+        type: array
+      isMainAccount:
+        type: boolean
+      issuer:
+        type: string
+      progress:
+        type: integer
+      type:
+        type: string
+    type: object
   auth.ApiResponse:
     properties:
       message:
@@ -95,6 +134,34 @@ info:
   title: Banking Service - LINE BK API
   version: 1.0.0
 paths:
+  /v1/accounts:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of accounts by user id
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/account.ApiResponseWithData'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/account.InfoResponse'
+                  type: array
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/account.ApiResponse'
+      security:
+      - Bearer: []
+      summary: Get accounts by user id
+      tags:
+      - Accounts
   /v1/auth/refresh:
     post:
       consumes:

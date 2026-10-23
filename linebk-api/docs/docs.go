@@ -24,6 +24,55 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/v1/accounts": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Get a list of accounts by user id",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Accounts"
+                ],
+                "summary": "Get accounts by user id",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/account.ApiResponseWithData"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/account.InfoResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/account.ApiResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/auth/refresh": {
             "post": {
                 "description": "Generate a new access token using a valid refresh token (from HTTP-only cookie)",
@@ -336,6 +385,66 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "account.ApiResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "statusCode": {
+                    "type": "integer"
+                }
+            }
+        },
+        "account.ApiResponseWithData": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "string"
+                },
+                "statusCode": {
+                    "type": "integer"
+                }
+            }
+        },
+        "account.InfoResponse": {
+            "type": "object",
+            "properties": {
+                "accountNumber": {
+                    "type": "string"
+                },
+                "amount": {
+                    "type": "string"
+                },
+                "color": {
+                    "type": "string"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "flags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "isMainAccount": {
+                    "type": "boolean"
+                },
+                "issuer": {
+                    "type": "string"
+                },
+                "progress": {
+                    "type": "integer"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
         "auth.ApiResponse": {
             "type": "object",
             "properties": {

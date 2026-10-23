@@ -16,6 +16,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/suphawit-wt/linebk-assignment/linebk-api/docs"
+	"github.com/suphawit-wt/linebk-assignment/linebk-api/internal/account"
 	"github.com/suphawit-wt/linebk-assignment/linebk-api/internal/auth"
 	"github.com/suphawit-wt/linebk-assignment/linebk-api/internal/session"
 	"github.com/suphawit-wt/linebk-assignment/linebk-api/internal/user"
@@ -143,6 +144,15 @@ func run() error {
 	)
 	authHandler := auth.NewHandler(srv.Validator, cfg, authService)
 
+	accRepo := account.NewRepositoryDB(db)
+	accCacheRepo := account.NewCachedRepository(
+		appLogger.Named("account"),
+		accRepo,
+		rdb,
+	)
+	accService := account.NewService(appLogger.Named("account"), accCacheRepo)
+	accHandler := account.NewHandler(srv.Validator, accService)
+
 	registerRoutes(
 		srv.Router,
 		&cfg.App,
@@ -151,6 +161,7 @@ func run() error {
 		jwtKeys,
 		authHandler,
 		userHandler,
+		accHandler,
 	)
 
 	serverLogger.Info("http server starting", zap.Int("port", int(cfg.Server.HTTP.Port)))
@@ -172,6 +183,7 @@ func registerRoutes(
 	jwtKeys *jwtkey.Keys,
 	authHandler auth.Handler,
 	userHandler user.Handler,
+	accHandler account.Handler,
 ) {
 	v1 := router.Group("v1")
 	authV1 := v1.Group("auth")
@@ -195,6 +207,10 @@ func registerRoutes(
 	authorizedUserV1 := v1.Group("user").
 		Use(middleware.AuthorizedUser(jwtSvc, jwtKeys.User.Access.Public))
 	authorizedUserV1.GET("", userHandler.GetUserInfo)
+
+	authorizedAccountsV1 := v1.Group("accounts").
+		Use(middleware.AuthorizedUser(jwtSvc, jwtKeys.User.Access.Public))
+	authorizedAccountsV1.GET("", accHandler.GetAccountsByUserID)
 
 	router.GET("/health", authHandler.HealthCheck)
 }
