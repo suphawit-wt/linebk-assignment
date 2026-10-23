@@ -19,6 +19,7 @@ import (
 	"github.com/suphawit-wt/linebk-assignment/linebk-api/internal/account"
 	"github.com/suphawit-wt/linebk-assignment/linebk-api/internal/auth"
 	"github.com/suphawit-wt/linebk-assignment/linebk-api/internal/session"
+	"github.com/suphawit-wt/linebk-assignment/linebk-api/internal/transaction"
 	"github.com/suphawit-wt/linebk-assignment/linebk-api/internal/user"
 	"github.com/suphawit-wt/linebk-assignment/linebk-api/pkg/go-libs/config"
 	"github.com/suphawit-wt/linebk-assignment/linebk-api/pkg/go-libs/database"
@@ -153,6 +154,15 @@ func run() error {
 	accService := account.NewService(appLogger.Named("account"), accCacheRepo)
 	accHandler := account.NewHandler(srv.Validator, accService)
 
+	txRepo := transaction.NewRepositoryDB(db)
+	txCacheRepo := transaction.NewCachedRepository(
+		appLogger.Named("transaction"),
+		txRepo,
+		rdb,
+	)
+	txService := transaction.NewService(appLogger.Named("transaction"), txCacheRepo)
+	txHandler := transaction.NewHandler(srv.Validator, txService)
+
 	registerRoutes(
 		srv.Router,
 		&cfg.App,
@@ -162,6 +172,7 @@ func run() error {
 		authHandler,
 		userHandler,
 		accHandler,
+		txHandler,
 	)
 
 	serverLogger.Info("http server starting", zap.Int("port", int(cfg.Server.HTTP.Port)))
@@ -184,6 +195,7 @@ func registerRoutes(
 	authHandler auth.Handler,
 	userHandler user.Handler,
 	accHandler account.Handler,
+	txHandler transaction.Handler,
 ) {
 	v1 := router.Group("v1")
 	authV1 := v1.Group("auth")
@@ -211,6 +223,10 @@ func registerRoutes(
 	authorizedAccountsV1 := v1.Group("accounts").
 		Use(middleware.AuthorizedUser(jwtSvc, jwtKeys.User.Access.Public))
 	authorizedAccountsV1.GET("", accHandler.GetAccountsByUserID)
+
+	authorizedTransactionsV1 := v1.Group("transactions").
+		Use(middleware.AuthorizedUser(jwtSvc, jwtKeys.User.Access.Public))
+	authorizedTransactionsV1.GET("/recent", txHandler.GetRecentTransactions)
 
 	router.GET("/health", authHandler.HealthCheck)
 }
