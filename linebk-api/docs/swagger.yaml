@@ -1,4 +1,46 @@
 basePath: /
+definitions:
+  auth.ApiResponse:
+    properties:
+      message:
+        type: string
+      status:
+        type: string
+      statusCode:
+        type: integer
+    type: object
+  auth.ApiResponseWithData:
+    properties:
+      status:
+        type: string
+      statusCode:
+        type: integer
+    type: object
+  auth.ErrResponse:
+    properties:
+      field:
+        type: string
+      message:
+        type: string
+    type: object
+  auth.SignInWithPasscodeRequest:
+    properties:
+      id:
+        example: 000027b0e9a211ef95a30242ac180002
+        maxLength: 50
+        type: string
+      passcode:
+        example: "123456"
+        type: string
+    required:
+    - id
+    - passcode
+    type: object
+  auth.TokenResponse:
+    properties:
+      accessToken:
+        type: string
+    type: object
 externalDocs:
   description: OpenAPI
   url: https://swagger.io/resources/open-api/
@@ -16,7 +58,51 @@ info:
   termsOfService: https://linebk.com/terms/
   title: Banking Service - LINE BK API
   version: 1.0.0
-paths: {}
+paths:
+  /v1/auth/signin/passcode:
+    post:
+      consumes:
+      - application/json
+      description: Signin using id and passcode
+      parameters:
+      - description: Signin with passscode payload
+        in: body
+        name: req
+        required: true
+        schema:
+          $ref: '#/definitions/auth.SignInWithPasscodeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/auth.ApiResponseWithData'
+            - properties:
+                data:
+                  $ref: '#/definitions/auth.TokenResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            allOf:
+            - $ref: '#/definitions/auth.ApiResponse'
+            - properties:
+                errors:
+                  $ref: '#/definitions/auth.ErrResponse'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/auth.ApiResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/auth.ApiResponse'
+      summary: Signin with id and passcode
+      tags:
+      - Auth
 securityDefinitions:
   Bearer:
     description: Put **_ONLY_** your JWT Bearer token in textbox below

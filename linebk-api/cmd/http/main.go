@@ -7,17 +7,27 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"go.uber.org/zap"
 
 	"github.com/suphawit-wt/linebk-assignment/linebk-api/docs"
 	"github.com/suphawit-wt/linebk-assignment/linebk-api/internal/auth"
+	"github.com/suphawit-wt/linebk-assignment/linebk-api/internal/session"
+	"github.com/suphawit-wt/linebk-assignment/linebk-api/internal/user"
 	"github.com/suphawit-wt/linebk-assignment/linebk-api/pkg/go-libs/config"
+	"github.com/suphawit-wt/linebk-assignment/linebk-api/pkg/go-libs/database"
+	"github.com/suphawit-wt/linebk-assignment/linebk-api/pkg/go-libs/security/jwt"
+	"github.com/suphawit-wt/linebk-assignment/linebk-api/pkg/go-libs/security/passwd"
+	"github.com/suphawit-wt/linebk-assignment/linebk-api/pkg/go-libs/security/vault"
 	"github.com/suphawit-wt/linebk-assignment/linebk-api/pkg/go-libs/server"
 	"github.com/suphawit-wt/linebk-assignment/linebk-api/pkg/go-libs/zaplog"
+	"github.com/suphawit-wt/linebk-assignment/linebk-api/pkg/shared/jwtkey"
+	"github.com/suphawit-wt/linebk-assignment/linebk-api/pkg/shared/middleware"
 )
 
 //	@title			Banking Service - LINE BK API
@@ -67,6 +77,9 @@ func run() error {
 	}()
 
 	appLogger := baseLogger.Named("linebk").Named("banking_service")
+	infraLogger := appLogger.Named("infra")
+	dbLogger := infraLogger.Named("mysql")
+	redisLogger := infraLogger.Named("redis")
 	serverLogger := appLogger.Named("http")
 
 	appLogger.Info("starting service initialization",
@@ -74,16 +87,64 @@ func run() error {
 		zap.String("mode", string(cfg.App.Mode)),
 	)
 
+	db, err := database.NewMySQLClient(cfg.App.Mode, &cfg.DB.MySQL)
+	if err != nil {
+		return fmt.Errorf("init mysql: %w", err)
+	}
+	defer func() {
+		dbLogger.Info("closing mysql client pool")
+		if err = db.Close(); err != nil {
+			dbLogger.Error("mysql close error", zap.Error(err))
+		}
+	}()
+
+	rdb, err := database.NewRedisClient(cfg.App.Mode, &cfg.DB.Redis)
+	if err != nil {
+		return fmt.Errorf("init redis: %w", err)
+	}
+	defer func() {
+		redisLogger.Info("closing redis client connection")
+		if err = rdb.Close(); err != nil {
+			redisLogger.Error("redis close error", zap.Error(err))
+		}
+	}()
+
+	vaultClient, err := vault.NewClient(cfg.App.Mode, &cfg.Security.Vault)
+	if err != nil {
+		return fmt.Errorf("init vault client: %w", err)
+	}
+
+	jwtKeys, err := jwtkey.LoadJwtKeysFromVault(vaultClient)
+	if err != nil {
+		return fmt.Errorf("load JWT keys: %w", err)
+	}
+
+	jwtSvc := jwt.NewService(cfg.Security.JWT)
+	passwordEncoder := passwd.NewArgon2IDEncoder(passwd.DefaultArgon2IDParams())
+
 	srv, err := server.NewHTTPGin(cfg, serverLogger)
 	if err != nil {
 		return fmt.Errorf("init http server: %w", err)
 	}
 
-	authHandler := auth.NewHandler(srv.Validator, cfg)
+	userRepo := user.NewRepositoryDB(db)
+
+	sessionRepo := session.NewRepositoryDB(rdb)
+	authService := auth.NewService(
+		appLogger.Named("auth"),
+		&cfg.Auth,
+		jwtSvc,
+		jwtKeys,
+		passwordEncoder,
+		userRepo,
+		sessionRepo,
+	)
+	authHandler := auth.NewHandler(srv.Validator, cfg, authService)
 
 	registerRoutes(
 		srv.Router,
 		&cfg.App,
+		rdb,
 		authHandler,
 	)
 
@@ -101,8 +162,12 @@ func run() error {
 func registerRoutes(
 	router *gin.Engine,
 	cfg *config.AppConfig,
+	rdb *redis.Client,
 	authHandler auth.Handler,
 ) {
+	v1 := router.Group("v1")
+	authV1 := v1.Group("auth")
+
 	switch cfg.Mode {
 	case "dev", "development", "local":
 		docs.SwaggerInfo.Title = cfg.Name
@@ -111,6 +176,10 @@ func registerRoutes(
 
 		router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	}
+
+	signinLimiter := middleware.RateLimiter(rdb, 5, 1*time.Minute)
+
+	authV1.POST("/signin/passcode", signinLimiter, authHandler.SignInWithPasscode)
 
 	router.GET("/health", authHandler.HealthCheck)
 }
