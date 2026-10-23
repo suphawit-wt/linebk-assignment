@@ -54,6 +54,29 @@ definitions:
       accessToken:
         type: string
     type: object
+  user.ApiResponse:
+    properties:
+      message:
+        type: string
+      status:
+        type: string
+      statusCode:
+        type: integer
+    type: object
+  user.ApiResponseWithData:
+    properties:
+      status:
+        type: string
+      statusCode:
+        type: integer
+    type: object
+  user.InfoResponse:
+    properties:
+      greetingMessage:
+        type: string
+      name:
+        type: string
+    type: object
 externalDocs:
   description: OpenAPI
   url: https://swagger.io/resources/open-api/
@@ -225,6 +248,36 @@ paths:
       summary: Sign out user
       tags:
       - Auth
+  /v1/user:
+    get:
+      consumes:
+      - application/json
+      description: Get a user info by id
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/user.ApiResponseWithData'
+            - properties:
+                data:
+                  $ref: '#/definitions/user.InfoResponse'
+              type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/user.ApiResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/user.ApiResponse'
+      security:
+      - Bearer: []
+      summary: Get user info by id
+      tags:
+      - Users
 securityDefinitions:
   Bearer:
     description: Put **_ONLY_** your JWT Bearer token in textbox below

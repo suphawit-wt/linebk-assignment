@@ -128,6 +128,8 @@ func run() error {
 	}
 
 	userRepo := user.NewRepositoryDB(db)
+	userService := user.NewService(appLogger.Named("user"), userRepo)
+	userHandler := user.NewHandler(srv.Validator, userService)
 
 	sessionRepo := session.NewRepositoryDB(rdb)
 	authService := auth.NewService(
@@ -145,7 +147,10 @@ func run() error {
 		srv.Router,
 		&cfg.App,
 		rdb,
+		jwtSvc,
+		jwtKeys,
 		authHandler,
+		userHandler,
 	)
 
 	serverLogger.Info("http server starting", zap.Int("port", int(cfg.Server.HTTP.Port)))
@@ -163,7 +168,10 @@ func registerRoutes(
 	router *gin.Engine,
 	cfg *config.AppConfig,
 	rdb *redis.Client,
+	jwtSvc jwt.Service,
+	jwtKeys *jwtkey.Keys,
 	authHandler auth.Handler,
+	userHandler user.Handler,
 ) {
 	v1 := router.Group("v1")
 	authV1 := v1.Group("auth")
@@ -183,6 +191,10 @@ func registerRoutes(
 	authV1.POST("/signin/password", signinLimiter, authHandler.SignInWithPassword)
 	authV1.POST("/signout", authHandler.SignOut)
 	authV1.POST("/refresh", authHandler.RefreshToken)
+
+	authorizedUserV1 := v1.Group("user").
+		Use(middleware.AuthorizedUser(jwtSvc, jwtKeys.User.Access.Public))
+	authorizedUserV1.GET("", userHandler.GetUserInfo)
 
 	router.GET("/health", authHandler.HealthCheck)
 }
