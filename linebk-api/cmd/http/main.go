@@ -182,6 +182,7 @@ func registerRoutes(
 	authV1.POST("/signin/passcode", signinLimiter, authHandler.SignInWithPasscode)
 	authV1.POST("/signin/password", signinLimiter, authHandler.SignInWithPassword)
 	authV1.POST("/signout", authHandler.SignOut)
+	authV1.POST("/refresh", authHandler.RefreshToken)
 
 	router.GET("/health", authHandler.HealthCheck)
 }

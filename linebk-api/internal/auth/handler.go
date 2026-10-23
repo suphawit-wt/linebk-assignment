@@ -19,6 +19,7 @@ type Handler interface {
 	SignInWithPasscode(c *gin.Context)
 	SignInWithPassword(c *gin.Context)
 	SignOut(c *gin.Context)
+	RefreshToken(c *gin.Context)
 
 	HealthCheck(c *gin.Context)
 }
@@ -202,6 +203,77 @@ func (h *handler) SignOut(c *gin.Context) {
 
 	c.SetSameSite(http.SameSiteLaxMode)
 	c.SetCookie(UserRefreshTokenCookieKey, "", -1, "/", h.cfg.Cookie.Domain, true, true)
+
+	c.JSON(http.StatusOK, res)
+}
+
+// RefreshToken godoc
+//
+//	@Summary		Refresh user token pair
+//	@Description	Generate a new access token using a valid refresh token (from HTTP-only cookie)
+//	@Tags			Auth
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	ApiResponseWithData{data=TokenResponse}
+//	@Failure		400	{object}	ApiResponse{errors=ErrResponse}
+//	@Failure		401	{object}	ApiResponse
+//	@Failure		500	{object}	ApiResponse
+//	@Router			/v1/auth/refresh [post]
+func (h *handler) RefreshToken(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+	defer cancel()
+
+	refreshToken, err := c.Cookie(UserRefreshTokenCookieKey)
+	if err != nil {
+		if err == http.ErrNoCookie {
+			errs.GinHandleError(
+				c,
+				errs.NewUnauthorizedError("Authentication session expired or missing."),
+			)
+			return
+		}
+
+		errs.GinHandleError(c, err)
+		return
+	}
+
+	token, err := h.svc.RotateTokens(ctx, refreshToken)
+	if err != nil {
+		if appErr, ok := err.(errs.AppError); ok {
+			if appErr.Status == api.StatusUnauthorized {
+				c.SetSameSite(http.SameSiteLaxMode)
+				c.SetCookie(
+					UserRefreshTokenCookieKey,
+					"",
+					-1,
+					"/",
+					h.cfg.Cookie.Domain,
+					true,
+					true,
+				)
+			}
+		}
+
+		errs.GinHandleError(c, err)
+		return
+	}
+
+	res := ApiResponseWithData[*TokenResponse]{
+		Status:     api.StatusSuccess,
+		StatusCode: http.StatusOK,
+		Data:       &TokenResponse{AccessToken: token.AccessToken},
+	}
+
+	c.SetSameSite(http.SameSiteLaxMode)
+	c.SetCookie(
+		UserRefreshTokenCookieKey,
+		token.RefreshToken,
+		int(h.cfg.Auth.RefreshTTL.Seconds()),
+		"/",
+		h.cfg.Cookie.Domain,
+		true,
+		true,
+	)
 
 	c.JSON(http.StatusOK, res)
 }
