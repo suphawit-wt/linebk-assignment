@@ -93,6 +93,31 @@ definitions:
       accessToken:
         type: string
     type: object
+  banner.ApiResponse:
+    properties:
+      message:
+        type: string
+      status:
+        type: string
+      statusCode:
+        type: integer
+    type: object
+  banner.ApiResponseWithData:
+    properties:
+      status:
+        type: string
+      statusCode:
+        type: integer
+    type: object
+  banner.Response:
+    properties:
+      description:
+        type: string
+      image:
+        type: string
+      title:
+        type: string
+    type: object
   card.ApiResponse:
     properties:
       message:
@@ -371,6 +396,34 @@ paths:
       summary: Sign out user
       tags:
       - Auth
+  /v1/banners:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of banners by user id
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/banner.ApiResponseWithData'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/banner.Response'
+                  type: array
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/banner.ApiResponse'
+      security:
+      - Bearer: []
+      summary: Get banners by user id
+      tags:
+      - Banners
   /v1/debit-cards:
     get:
       consumes:

@@ -18,6 +18,7 @@ import (
 	"github.com/suphawit-wt/linebk-assignment/linebk-api/docs"
 	"github.com/suphawit-wt/linebk-assignment/linebk-api/internal/account"
 	"github.com/suphawit-wt/linebk-assignment/linebk-api/internal/auth"
+	"github.com/suphawit-wt/linebk-assignment/linebk-api/internal/banner"
 	"github.com/suphawit-wt/linebk-assignment/linebk-api/internal/card"
 	"github.com/suphawit-wt/linebk-assignment/linebk-api/internal/session"
 	"github.com/suphawit-wt/linebk-assignment/linebk-api/internal/transaction"
@@ -173,6 +174,10 @@ func run() error {
 	cardService := card.NewService(appLogger.Named("card"), cardCacheRepo)
 	cardHandler := card.NewHandler(srv.Validator, cardService)
 
+	bannerRepo := banner.NewRepositoryDB(db)
+	bannerService := banner.NewService(appLogger.Named("banner"), bannerRepo)
+	bannerHandler := banner.NewHandler(srv.Validator, bannerService)
+
 	registerRoutes(
 		srv.Router,
 		&cfg.App,
@@ -184,6 +189,7 @@ func run() error {
 		accHandler,
 		txHandler,
 		cardHandler,
+		bannerHandler,
 	)
 
 	serverLogger.Info("http server starting", zap.Int("port", int(cfg.Server.HTTP.Port)))
@@ -208,6 +214,7 @@ func registerRoutes(
 	accHandler account.Handler,
 	txHandler transaction.Handler,
 	cardHandler card.Handler,
+	bannerHandler banner.Handler,
 ) {
 	v1 := router.Group("v1")
 	authV1 := v1.Group("auth")
@@ -243,6 +250,10 @@ func registerRoutes(
 	authorizedDebitCardsV1 := v1.Group("debit-cards").
 		Use(middleware.AuthorizedUser(jwtSvc, jwtKeys.User.Access.Public))
 	authorizedDebitCardsV1.GET("", cardHandler.GetDebitCards)
+
+	authorizedBannersV1 := v1.Group("banners").
+		Use(middleware.AuthorizedUser(jwtSvc, jwtKeys.User.Access.Public))
+	authorizedBannersV1.GET("", bannerHandler.GetBanners)
 
 	router.GET("/health", authHandler.HealthCheck)
 }
