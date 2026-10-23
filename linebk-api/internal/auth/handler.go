@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"time"
 
@@ -17,6 +18,7 @@ import (
 type Handler interface {
 	SignInWithPasscode(c *gin.Context)
 	SignInWithPassword(c *gin.Context)
+	SignOut(c *gin.Context)
 
 	HealthCheck(c *gin.Context)
 }
@@ -148,6 +150,58 @@ func (h *handler) SignInWithPassword(c *gin.Context) {
 		true,
 		true,
 	)
+
+	c.JSON(http.StatusOK, res)
+}
+
+// SignOut godoc
+//
+//	@Summary		Sign out user
+//	@Description	Invalidate user session and clear authentication cookies
+//	@Tags			Auth
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	ApiResponse
+//	@Failure		400	{object}	ApiResponse
+//	@Failure		401	{object}	ApiResponse	"Unauthorized"
+//	@Failure		500	{object}	ApiResponse
+//	@Router			/v1/auth/signout [post]
+func (h *handler) SignOut(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+	defer cancel()
+
+	refreshToken, err := c.Cookie(UserRefreshTokenCookieKey)
+	if err != nil {
+		if errors.Is(err, http.ErrNoCookie) {
+			errs.GinHandleError(
+				c,
+				errs.NewUnauthorizedError(
+					"Authentication session expired or missing.",
+				),
+			)
+			return
+		}
+
+		errs.GinHandleError(c, err)
+		return
+	}
+
+	if err := h.svc.SignOut(
+		ctx,
+		refreshToken,
+	); err != nil {
+		errs.GinHandleError(c, err)
+		return
+	}
+
+	res := ApiResponse{
+		Status:     api.StatusSuccess,
+		StatusCode: http.StatusOK,
+		Message:    "Sign Out Successfully.",
+	}
+
+	c.SetSameSite(http.SameSiteLaxMode)
+	c.SetCookie(UserRefreshTokenCookieKey, "", -1, "/", h.cfg.Cookie.Domain, true, true)
 
 	c.JSON(http.StatusOK, res)
 }

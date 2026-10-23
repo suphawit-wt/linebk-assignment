@@ -160,6 +160,33 @@ paths:
       summary: Signin with id and password
       tags:
       - Auth
+  /v1/auth/signout:
+    post:
+      consumes:
+      - application/json
+      description: Invalidate user session and clear authentication cookies
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth.ApiResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/auth.ApiResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/auth.ApiResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/auth.ApiResponse'
+      summary: Sign out user
+      tags:
+      - Auth
 securityDefinitions:
   Bearer:
     description: Put **_ONLY_** your JWT Bearer token in textbox below
