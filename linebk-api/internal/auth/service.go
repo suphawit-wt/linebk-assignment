@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"crypto/rsa"
 	"errors"
 	"fmt"
 	"strings"
@@ -24,6 +25,13 @@ type Token struct {
 	RefreshToken string
 }
 
+// RotateKeys holds the cryptographic RSA keys required during a key rotation phase.
+type RotateKeys struct {
+	AccessPrivateKey  *rsa.PrivateKey
+	RefreshPrivateKey *rsa.PrivateKey
+	RefreshPublicKey  *rsa.PublicKey
+}
+
 // Service defines the data access contract for authentication services.
 type Service interface {
 	SignInWithPasscode(
@@ -38,6 +46,10 @@ type Service interface {
 		ctx context.Context,
 		refreshToken string,
 	) error
+	RotateTokens(
+		ctx context.Context,
+		refreshToken string,
+	) (*Token, error)
 }
 
 type service struct {
@@ -208,4 +220,54 @@ func (s *service) SignOut(
 	)
 
 	return nil
+}
+
+func (s *service) RotateTokens(
+	ctx context.Context,
+	refreshToken string,
+) (*Token, error) {
+	logger := s.logger.Named("rotate_tokens")
+
+	keys := RotateKeys{
+		AccessPrivateKey:  s.jwtKeys.User.Access.Private,
+		RefreshPrivateKey: s.jwtKeys.User.Refresh.Private,
+		RefreshPublicKey:  s.jwtKeys.User.Refresh.Public,
+	}
+
+	claims, err := s.jwtSvc.VerifyRS256(refreshToken, keys.RefreshPublicKey)
+	if err != nil {
+		logger.Warn("refresh token validation failed", zap.Error(err))
+		return nil, errs.NewUnauthorizedError("Invalid or expired refresh token.")
+	}
+
+	accID := claims.Subject
+	sessionID := claims.ID
+	clientType := "user"
+	clientKey := strings.ToLower(clientType)
+	sessionKey := fmt.Sprintf("%s:%s:session:%s", clientKey, accID, sessionID)
+	accSessionsKey := fmt.Sprintf("%s:%s:sessions", clientKey, accID)
+
+	sessionMeta, err := s.validateAndFetchSession(
+		ctx,
+		sessionKey,
+		accSessionsKey,
+		accID,
+		sessionID,
+		refreshToken,
+		logger,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.issueRotatedTokens(
+		ctx,
+		claims,
+		sessionMeta,
+		sessionID,
+		sessionKey,
+		accSessionsKey,
+		keys,
+		logger,
+	)
 }
