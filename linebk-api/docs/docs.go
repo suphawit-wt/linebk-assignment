@@ -331,6 +331,55 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/debit-cards": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Get a list of debit cards by user id",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Debit Cards"
+                ],
+                "summary": "Get debit cards by user id",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/card.ApiResponseWithData"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/card.DebitCardResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/card.ApiResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/transactions/recent": {
             "get": {
                 "security": [
@@ -570,6 +619,54 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "accessToken": {
+                    "type": "string"
+                }
+            }
+        },
+        "card.ApiResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "statusCode": {
+                    "type": "integer"
+                }
+            }
+        },
+        "card.ApiResponseWithData": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "string"
+                },
+                "statusCode": {
+                    "type": "integer"
+                }
+            }
+        },
+        "card.DebitCardResponse": {
+            "type": "object",
+            "properties": {
+                "borderColor": {
+                    "type": "string"
+                },
+                "color": {
+                    "type": "string"
+                },
+                "issuer": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "number": {
+                    "type": "string"
+                },
+                "status": {
                     "type": "string"
                 }
             }
