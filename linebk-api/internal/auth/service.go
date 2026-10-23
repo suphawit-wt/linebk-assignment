@@ -3,6 +3,8 @@ package auth
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
 
 	"go.uber.org/zap"
 
@@ -32,6 +34,10 @@ type Service interface {
 		ctx context.Context,
 		userID, passcode, ipAddress, userAgent string,
 	) (*Token, error)
+	SignOut(
+		ctx context.Context,
+		refreshToken string,
+	) error
 }
 
 type service struct {
@@ -156,4 +162,50 @@ func (s *service) SignInWithPassword(
 		userAgent,
 		logger,
 	)
+}
+
+func (s *service) SignOut(
+	ctx context.Context,
+	refreshToken string,
+) error {
+	logger := s.logger.Named("sign_out")
+
+	claims, err := s.jwtSvc.VerifyRS256(refreshToken, s.jwtKeys.User.Refresh.Public)
+	if err != nil {
+		return errs.NewUnauthorizedError("Invalid Refresh Token!")
+	}
+
+	accID := claims.Subject
+	sessionID := claims.ID
+	clientType := ClientTypeUser
+	clientKey := strings.ToLower(clientType.String())
+	sessionKey := fmt.Sprintf("%s:%s:session:%s", clientKey, accID, sessionID)
+	accSessionsKey := fmt.Sprintf("%s:%s:sessions", clientKey, accID)
+
+	deleted, err := s.sessionRepo.Revoke(ctx, sessionID, sessionKey, accSessionsKey)
+	if err != nil {
+		logger.Error("failed to revoke device session in storage",
+			zap.String("account_id", accID),
+			zap.String("session_id", sessionID),
+			zap.Error(err),
+		)
+
+		return err
+	}
+
+	if !deleted {
+		logger.Info("session already revoked or expired",
+			zap.String("account_id", accID),
+			zap.String("session_id", sessionID),
+		)
+
+		return nil
+	}
+
+	logger.Info("device session revoked successfully",
+		zap.String("account_id", accID),
+		zap.String("session_id", sessionID),
+	)
+
+	return nil
 }
