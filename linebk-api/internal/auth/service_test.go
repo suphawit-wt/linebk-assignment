@@ -152,3 +152,148 @@ func TestService_SignInWithPasscode(t *testing.T) {
 		})
 	}
 }
+
+func TestService_SignInWithPassword(t *testing.T) {
+	t.Parallel()
+
+	logger := zaplog.NewNop()
+	sampleUserID := "user-uuid-12345"
+	samplePassword := "securePassword123"
+	sampleHash := "$2a$10$hashedpasswordstring"
+	clientType := auth.ClientTypeUser
+	clientKey := strings.ToLower(clientType.String())
+
+	sampleUser := &user.User{
+		UserID:       sampleUserID,
+		PasswordHash: sql.NullString{String: sampleHash, Valid: true},
+	}
+
+	jwtKeys := &jwtkey.Keys{
+		User: jwtkey.UserTokens{
+			Access:  jwtkey.KeyPair{Private: &rsa.PrivateKey{}},
+			Refresh: jwtkey.KeyPair{Private: &rsa.PrivateKey{}},
+		},
+	}
+
+	testCases := []struct {
+		name          string
+		userID        string
+		password      string
+		mockSetup     func(mUserRepo *userMocks.MockRepository, mPasswd *passwdMocks.MockEncoder, mJwt *jwtMocks.MockService, mSessionRepo *sessionMocks.MockRepository)
+		expectedError bool
+	}{
+		{
+			name:     "Success - Sign In With Password",
+			userID:   sampleUserID,
+			password: samplePassword,
+			mockSetup: func(mUserRepo *userMocks.MockRepository, mPasswd *passwdMocks.MockEncoder, mJwt *jwtMocks.MockService, mSessionRepo *sessionMocks.MockRepository) {
+				mUserRepo.EXPECT().
+					GetUserByUserID(gomock.Any(), sampleUserID).
+					Return(sampleUser, nil).
+					Times(1)
+
+				mPasswd.EXPECT().
+					Verify(sampleHash, samplePassword).
+					Return(true, nil).
+					Times(1)
+
+				mSessionRepo.EXPECT().
+					TrimSessionsByCapacity(gomock.Any(), sampleUserID, gomock.Any(), clientKey, int64(1)).
+					Return(nil).
+					Times(1)
+
+				mJwt.EXPECT().
+					SignRS256(sampleUserID, gomock.Any(), "", gomock.Any(), clientType.String(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return("mock.access.token", nil).
+					Times(1)
+
+				mJwt.EXPECT().
+					SignRS256(sampleUserID, gomock.Any(), "", gomock.Any(), clientType.String(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return("mock.refresh.token", nil).
+					Times(1)
+
+				mSessionRepo.EXPECT().
+					Create(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil).
+					Times(1)
+			},
+			expectedError: false,
+		},
+		{
+			name:     "Failure - User Not Found",
+			userID:   "unknown-user",
+			password: samplePassword,
+			mockSetup: func(mUserRepo *userMocks.MockRepository, mPasswd *passwdMocks.MockEncoder, mJwt *jwtMocks.MockService, mSessionRepo *sessionMocks.MockRepository) {
+				mUserRepo.EXPECT().
+					GetUserByUserID(gomock.Any(), "unknown-user").
+					Return(nil, user.ErrUserNotFound).
+					Times(1)
+			},
+			expectedError: true,
+		},
+		{
+			name:     "Failure - Invalid Password",
+			userID:   sampleUserID,
+			password: "wrongPassword",
+			mockSetup: func(mUserRepo *userMocks.MockRepository, mPasswd *passwdMocks.MockEncoder, mJwt *jwtMocks.MockService, mSessionRepo *sessionMocks.MockRepository) {
+				mUserRepo.EXPECT().
+					GetUserByUserID(gomock.Any(), sampleUserID).
+					Return(sampleUser, nil).
+					Times(1)
+
+				mPasswd.EXPECT().
+					Verify(sampleHash, "wrongPassword").
+					Return(false, nil).
+					Times(1)
+			},
+			expectedError: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mUserRepo := userMocks.NewMockRepository(ctrl)
+			mPasswd := passwdMocks.NewMockEncoder(ctrl)
+			mJwt := jwtMocks.NewMockService(ctrl)
+			mSessionRepo := sessionMocks.NewMockRepository(ctrl)
+
+			if tc.mockSetup != nil {
+				tc.mockSetup(mUserRepo, mPasswd, mJwt, mSessionRepo)
+			}
+
+			svc := auth.NewService(
+				logger,
+				&config.AuthConfig{},
+				mJwt,
+				jwtKeys,
+				mPasswd,
+				mUserRepo,
+				mSessionRepo,
+			)
+
+			tokens, err := svc.SignInWithPassword(
+				context.Background(),
+				tc.userID,
+				tc.password,
+				"127.0.0.1",
+				"Mozilla",
+			)
+
+			if tc.expectedError {
+				require.Error(t, err)
+				assert.Nil(t, tokens)
+			} else {
+				require.NoError(t, err)
+				assert.NotNil(t, tokens)
+				assert.NotEmpty(t, tokens.AccessToken)
+				assert.NotEmpty(t, tokens.RefreshToken)
+			}
+		})
+	}
+}
