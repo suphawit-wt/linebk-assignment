@@ -4,9 +4,12 @@ import (
 	"context"
 	"crypto/rsa"
 	"database/sql"
+	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
+	gojwt "github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -16,6 +19,7 @@ import (
 	"github.com/suphawit-wt/linebk-assignment/linebk-api/internal/user"
 	userMocks "github.com/suphawit-wt/linebk-assignment/linebk-api/internal/user/mocks"
 	"github.com/suphawit-wt/linebk-assignment/linebk-api/pkg/go-libs/config"
+	"github.com/suphawit-wt/linebk-assignment/linebk-api/pkg/go-libs/security/jwt"
 	jwtMocks "github.com/suphawit-wt/linebk-assignment/linebk-api/pkg/go-libs/security/jwt/mocks"
 	passwdMocks "github.com/suphawit-wt/linebk-assignment/linebk-api/pkg/go-libs/security/passwd/mocks"
 	"github.com/suphawit-wt/linebk-assignment/linebk-api/pkg/go-libs/zaplog"
@@ -296,4 +300,145 @@ func TestService_SignInWithPassword(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestService_SignOut(t *testing.T) {
+	t.Parallel()
+
+	logger := zaplog.NewNop()
+
+	sampleRefreshToken := "valid.refresh.token.string"
+	sampleAccountID := "user-uuid-12345"
+	sampleSessionID := "session-uuid-98765"
+	samplePublicKey := &rsa.PublicKey{}
+	clientType := auth.ClientTypeUser
+	clientKey := strings.ToLower(clientType.String())
+
+	jwtKeys := &jwtkey.Keys{
+		User: jwtkey.UserTokens{
+			Refresh: jwtkey.KeyPair{
+				Public: samplePublicKey,
+			},
+		},
+	}
+
+	sampleClaims := &jwt.AuthClaims{
+		RegisteredClaims: gojwt.RegisteredClaims{
+			Subject: sampleAccountID,
+			ID:      sampleSessionID,
+		},
+	}
+
+	expectedSessionKey := fmtKey(clientKey, sampleAccountID, "session", sampleSessionID)
+	expectedAccSessionsKey := fmtKey(clientKey, sampleAccountID, "sessions", "")
+
+	testCases := []struct {
+		name          string
+		refreshToken  string
+		mockSetup     func(mJwt *jwtMocks.MockService, mSessionRepo *sessionMocks.MockRepository)
+		expectedError bool
+	}{
+		{
+			name:         "Success - Session Successfully Revoked",
+			refreshToken: sampleRefreshToken,
+			mockSetup: func(mJwt *jwtMocks.MockService, mSessionRepo *sessionMocks.MockRepository) {
+				mJwt.EXPECT().
+					VerifyRS256(sampleRefreshToken, samplePublicKey).
+					Return(sampleClaims, nil).
+					Times(1)
+
+				mSessionRepo.EXPECT().
+					Revoke(gomock.Any(), sampleSessionID, expectedSessionKey, expectedAccSessionsKey).
+					Return(true, nil).
+					Times(1)
+			},
+			expectedError: false,
+		},
+		{
+			name:         "Success - Session Already Expired or Revoked (Idempotent)",
+			refreshToken: sampleRefreshToken,
+			mockSetup: func(mJwt *jwtMocks.MockService, mSessionRepo *sessionMocks.MockRepository) {
+				mJwt.EXPECT().
+					VerifyRS256(sampleRefreshToken, samplePublicKey).
+					Return(sampleClaims, nil).
+					Times(1)
+
+				mSessionRepo.EXPECT().
+					Revoke(gomock.Any(), sampleSessionID, expectedSessionKey, expectedAccSessionsKey).
+					Return(false, nil).
+					Times(1)
+			},
+			expectedError: false,
+		},
+		{
+			name:         "Failure - Invalid Refresh Token Signature",
+			refreshToken: "invalid.token",
+			mockSetup: func(mJwt *jwtMocks.MockService, mSessionRepo *sessionMocks.MockRepository) {
+				mJwt.EXPECT().
+					VerifyRS256("invalid.token", samplePublicKey).
+					Return(nil, errors.New("signature mismatch")).
+					Times(1)
+			},
+			expectedError: true,
+		},
+		{
+			name:         "Failure - Repository Revoke Error Propagated",
+			refreshToken: sampleRefreshToken,
+			mockSetup: func(mJwt *jwtMocks.MockService, mSessionRepo *sessionMocks.MockRepository) {
+				mJwt.EXPECT().
+					VerifyRS256(sampleRefreshToken, samplePublicKey).
+					Return(sampleClaims, nil).
+					Times(1)
+
+				mSessionRepo.EXPECT().
+					Revoke(gomock.Any(), sampleSessionID, expectedSessionKey, expectedAccSessionsKey).
+					Return(false, errors.New("redis down")).
+					Times(1)
+			},
+			expectedError: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockJwtSvc := jwtMocks.NewMockService(ctrl)
+			mockSessionRepo := sessionMocks.NewMockRepository(ctrl)
+
+			if tc.mockSetup != nil {
+				tc.mockSetup(mockJwtSvc, mockSessionRepo)
+			}
+
+			svc := auth.NewService(
+				logger,
+				&config.AuthConfig{},
+				mockJwtSvc,
+				jwtKeys,
+				nil,
+				nil,
+				mockSessionRepo,
+			)
+
+			ctx := context.Background()
+			err := svc.SignOut(ctx, tc.refreshToken)
+
+			if tc.expectedError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func fmtKey(clientType, accID, kind, sessionID string) string {
+	if kind == "sessions" {
+		return fmt.Sprintf("%s:%s:%s", clientType, accID, kind)
+	}
+	return fmt.Sprintf("%s:%s:%s:%s", clientType, accID, kind, sessionID)
 }
