@@ -16,6 +16,7 @@ import (
 // Handler defines HTTP request handler methods for user authentication and system health checks.
 type Handler interface {
 	SignInWithPasscode(c *gin.Context)
+	SignInWithPassword(c *gin.Context)
 
 	HealthCheck(c *gin.Context)
 }
@@ -63,6 +64,64 @@ func (h *handler) SignInWithPasscode(c *gin.Context) {
 		ctx,
 		req.ID,
 		req.Passcode,
+		c.ClientIP(),
+		c.Request.UserAgent(),
+	)
+	if err != nil {
+		errs.GinHandleError(c, err)
+		return
+	}
+
+	res := ApiResponseWithData[*TokenResponse]{
+		Status:     api.StatusSuccess,
+		StatusCode: http.StatusOK,
+		Data: &TokenResponse{
+			AccessToken: token.AccessToken,
+		},
+	}
+
+	c.SetSameSite(http.SameSiteLaxMode)
+	c.SetCookie(
+		UserRefreshTokenCookieKey,
+		token.RefreshToken,
+		int(h.cfg.Auth.RefreshTTL.Seconds()),
+		"/",
+		h.cfg.Cookie.Domain,
+		true,
+		true,
+	)
+
+	c.JSON(http.StatusOK, res)
+}
+
+// SignInWithPassword godoc
+//
+//	@Summary		Signin with id and password
+//	@Description	Signin using id and password
+//	@Tags			Auth
+//	@Accept			json
+//	@Produce		json
+//	@Param			req	body		SignInWithPasswordRequest	true	"Signin with password payload"
+//	@Success		200	{object}	ApiResponseWithData{data=TokenResponse}
+//	@Failure		400	{object}	ApiResponse{errors=ErrResponse}
+//	@Failure		401	{object}	ApiResponse
+//	@Failure		500	{object}	ApiResponse
+//	@Router			/v1/auth/signin/password [post]
+func (h *handler) SignInWithPassword(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+	defer cancel()
+
+	var req SignInWithPasswordRequest
+
+	if err := errs.GinBindAndValidate(c, &req, h.vdt); err != nil {
+		errs.GinHandleError(c, err)
+		return
+	}
+
+	token, err := h.svc.SignInWithPassword(
+		ctx,
+		req.ID,
+		req.Password,
 		c.ClientIP(),
 		c.Request.UserAgent(),
 	)

@@ -180,6 +180,7 @@ func registerRoutes(
 	signinLimiter := middleware.RateLimiter(rdb, 5, 1*time.Minute)
 
 	authV1.POST("/signin/passcode", signinLimiter, authHandler.SignInWithPasscode)
+	authV1.POST("/signin/password", signinLimiter, authHandler.SignInWithPassword)
 
 	router.GET("/health", authHandler.HealthCheck)
 }

@@ -36,6 +36,19 @@ definitions:
     - id
     - passcode
     type: object
+  auth.SignInWithPasswordRequest:
+    properties:
+      id:
+        example: 000027b0e9a211ef95a30242ac180002
+        maxLength: 50
+        type: string
+      password:
+        example: 123456Az@
+        type: string
+    required:
+    - id
+    - password
+    type: object
   auth.TokenResponse:
     properties:
       accessToken:
@@ -101,6 +114,50 @@ paths:
           schema:
             $ref: '#/definitions/auth.ApiResponse'
       summary: Signin with id and passcode
+      tags:
+      - Auth
+  /v1/auth/signin/password:
+    post:
+      consumes:
+      - application/json
+      description: Signin using id and password
+      parameters:
+      - description: Signin with password payload
+        in: body
+        name: req
+        required: true
+        schema:
+          $ref: '#/definitions/auth.SignInWithPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/auth.ApiResponseWithData'
+            - properties:
+                data:
+                  $ref: '#/definitions/auth.TokenResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            allOf:
+            - $ref: '#/definitions/auth.ApiResponse'
+            - properties:
+                errors:
+                  $ref: '#/definitions/auth.ErrResponse'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/auth.ApiResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/auth.ApiResponse'
+      summary: Signin with id and password
       tags:
       - Auth
 securityDefinitions:
