@@ -1,0 +1,106 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+# Cancel redundant in-flight workflow runs on pull requests
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint-go:
+    name: Go Linting
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: linebk-api
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: 'linebk-api/go.mod'
+          cache: true
+          cache-dependency-path: linebk-api/go.sum
+
+      - name: Golangci-Lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.14.0
+          args: --timeout=10m --enable gocognit
+          skip-cache: true
+          working-directory: linebk-api
+
+      - name: Verify Go Module Tidiness
+        run: |
+          go mod tidy
+          git diff --exit-code || (echo "go.mod or go.sum is dirty. Run 'go mod tidy' locally." && exit 1)
+
+  test:
+    name: Unit Testing
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: linebk-api
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: 'linebk-api/go.mod'
+          cache: true
+          cache-dependency-path: linebk-api/go.sum
+
+      - name: Run Tests with Race Detector
+        run: |
+          go test -v -race -count=1 -coverprofile=coverage.out ./...
+
+      - name: Upload Coverage Artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: code-coverage
+          path: linebk-api/coverage.out
+          retention-days: 7
+
+  coverage:
+    name: Coverage Threshold Check
+    needs: test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: linebk-api
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: 'linebk-api/go.mod'
+          cache: true
+          cache-dependency-path: linebk-api/go.sum
+
+      - name: Download Coverage Artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: code-coverage
+          path: linebk-api/
+
+      - name: Display Coverage Summary
+        run: |
+          go tool cover -func=coverage.out
