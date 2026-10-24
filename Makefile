@@ -112,6 +112,18 @@ swag: ## Generate Swagger API documentation specs
 	@swag init -d linebk-api -g cmd/http/main.go -o linebk-api/docs
 	@echo -e "$(GREEN)[SUCCESS]$(RESET) Swagger docs generated successfully."
 
+.PHONY: load-test
+load-test: ## Run k6 load test script
+	@echo -e "$(CYAN)[INFO]$(RESET) Running k6 load test..."
+	@k6 run load_test.js
+	@echo -e "$(GREEN)[SUCCESS]$(RESET) Load test completed."
+
+.PHONY: stress-test
+stress-test: ## Run k6 stress test script
+	@echo -e "$(CYAN)[INFO]$(RESET) Running k6 stress test..."
+	@k6 run stress_test.js
+	@echo -e "$(GREEN)[SUCCESS]$(RESET) Stress test completed."
+
 .PHONY: help
 help: ## Display available Makefile commands and descriptions
 	@echo -e "$(BOLD)Available Commands for LINE BK Development:$(RESET)"
