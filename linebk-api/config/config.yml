@@ -2,7 +2,18 @@ app:
   name: Banking Service - LINE BK API
   description: |
     Banking Service handling secure authentication, authorization, 
-    and core banking operations.
+    and core banking operations (Accounts, Transactions, Debit Cards, and Banners) 
+    for the LINE BK ecosystem.
+
+    Architecture & Core Features:
+    - Domain-Driven Design (DDD) with clean Hexagonal Repository, Service, and Handler layers
+    - High-throughput Redis caching decorator pattern with fallback mechanisms
+    - Secure password/passcode hashing using Argon2id and RS256 JWT key rotation
+    - Request rate-limiting middleware and Guard Pattern flow control
+
+    Testing & Reliability:
+    - Comprehensive unit test suite with gomock and testify
+    - Production-validated Grafana k6 load & stress testing suites (tested at 3,700+ TPS)
 
     Authentication:
     Use Bearer Token in Authorization header.
