@@ -1,8 +1,10 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { HelmetProvider } from 'react-helmet-async';
+import { Provider } from 'react-redux';
 
 import { AppRouterProvider } from 'app/providers';
+import { store } from 'app/store';
 
 import reportWebVitals from './reportWebVitals';
 
@@ -18,7 +20,9 @@ const root = createRoot(container);
 root.render(
   <React.StrictMode>
     <HelmetProvider>
-      <AppRouterProvider />
+      <Provider store={store}>
+        <AppRouterProvider />
+      </Provider>
     </HelmetProvider>
   </React.StrictMode>,
 );
