@@ -1,0 +1,17 @@
+FROM node:24-alpine AS development
+
+WORKDIR /app
+
+RUN npm install -g pnpm
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+
+RUN pnpm install --frozen-lockfile
+
+COPY . .
+
+EXPOSE 3000
+
+ENV NODE_ENV=development
+
+CMD ["pnpm", "start", "--", "--host", "0.0.0.0"]

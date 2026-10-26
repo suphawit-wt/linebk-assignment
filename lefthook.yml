@@ -10,6 +10,20 @@ pre-commit:
       run: |
         echo {staged_files} | xargs -n1 dirname | sort -u | xargs -I {} golangci-lint run --fix {}
       stage_fixed: true
+    
+    prettier-web:
+      tags: frontend style
+      root: "linebk-web"
+      glob: "*.{js,jsx,ts,tsx,json,css,md}"
+      run: pnpm exec prettier --write {staged_files}
+      stage_fixed: true
+
+    eslint-web:
+      tags: frontend lint
+      root: linebk-web"
+      glob: "*.{js,jsx,ts,tsx}"
+      run: pnpm exec eslint --fix {staged_files}
+      stage_fixed: true
 
 pre-push:
   parallel: true
@@ -23,6 +37,11 @@ pre-push:
       tags: go test
       root: "linebk-api"
       run: go test -race -short ./...
+
+    web-lint-full:
+      tags: frontend lint
+      root: "linebk-web"
+      run: pnpm run lint
 
 commit-msg:
   commands:

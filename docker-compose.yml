@@ -107,6 +107,27 @@ services:
     networks:
       - linebk-net
 
+  web:
+    container_name: linebk-web
+    build:
+      context: linebk-web
+      dockerfile: Dockerfile
+      args:
+        - REACT_APP_API_BASE_URL=http://localhost:8080
+    image: linebk-web:1.0.0
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: "256M"
+    depends_on:
+      - "api"
+    networks:
+      - linebk-net
+
 volumes:
   db-data:
     name: linebk-db-data

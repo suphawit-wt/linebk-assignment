@@ -1,0 +1,46 @@
+.wrap {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 100vh;
+  position: relative;
+}
+
+.splash {
+  width: 100%;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 30;
+  background: #fff;
+}
+
+.loader {
+  width: 50px;
+  aspect-ratio: 1;
+  --_g: no-repeat radial-gradient(farthest-side, #24c875 94%, #04ffb800);
+  background:
+    var(--_g) 0 0,
+    var(--_g) 100% 0,
+    var(--_g) 100% 100%,
+    var(--_g) 0 100%;
+  background-size: 40% 40%;
+  animation: l38 0.5s infinite;
+}
+
+@keyframes l38 {
+  100% {
+    background-position:
+      100% 0,
+      100% 100%,
+      0 100%,
+      0 0;
+  }
+}

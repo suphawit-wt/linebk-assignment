@@ -13,6 +13,9 @@ RESET   := \033[0m
 init: ## Initialize project (install dependencies, config .env files, generate Vault JWT keys, and check/install k6)
 	@echo -e "$(CYAN)[INFO]$(RESET) Installing Node modules and setting up Lefthook hooks..."
 	@pnpm install && lefthook install
+
+	@echo -e "$(CYAN)[INFO]$(RESET) Installing linebk-web Node modules..."
+	@cd linebk-web && pnpm install
 	
 	@echo -e "$(CYAN)[INFO]$(RESET) Configuring environment files..."
 	@if [ -f .env.example ] && [ ! -f .env ]; then \
@@ -27,6 +30,13 @@ init: ## Initialize project (install dependencies, config .env files, generate V
 		echo -e "$(GREEN)[SUCCESS]$(RESET) Created linebk-api/.env from .env.example"; \
 	else \
 		echo -e "$(YELLOW)[SKIP]$(RESET) linebk-api/.env already exists or .env.example missing"; \
+	fi
+
+	@if [ -f linebk-web/.env.example ] && [ ! -f linebk-web/.env ]; then \
+		cp linebk-web/.env.example linebk-web/.env; \
+		echo -e "$(GREEN)[SUCCESS]$(RESET) Created linebk-web/.env from .env.example"; \
+	else \
+		echo -e "$(YELLOW)[SKIP]$(RESET) linebk-web/.env already exists or .env.example missing"; \
 	fi
 	
 	@echo -e "$(CYAN)[INFO]$(RESET) Preparing Vault JWT secrets directory..."
@@ -111,6 +121,18 @@ swag: ## Generate Swagger API documentation specs
 	@echo -e "$(CYAN)[INFO]$(RESET) Generating Swagger documentation..."
 	@swag init -d linebk-api -g cmd/http/main.go -o linebk-api/docs
 	@echo -e "$(GREEN)[SUCCESS]$(RESET) Swagger docs generated successfully."
+
+.PHONY: lint-web
+lint-web: ## Run ESLint fix on the React web frontend
+	@echo -e "$(CYAN)[INFO]$(RESET) Running web linter with auto-fix..."
+	@cd linebk-web && pnpm lint:fix
+	@echo -e "$(GREEN)[SUCCESS]$(RESET) Web linting completed."
+
+.PHONY: format-web
+format-web: ## Format React web frontend files using Prettier
+	@echo -e "$(CYAN)[INFO]$(RESET) Formatting web codebase with Prettier..."
+	@cd linebk-web && pnpm format
+	@echo -e "$(GREEN)[SUCCESS]$(RESET) Web codebase formatted successfully."
 
 .PHONY: load-test
 load-test: ## Run k6 load test script

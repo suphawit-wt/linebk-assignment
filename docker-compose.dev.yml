@@ -103,6 +103,24 @@ services:
         condition: service_healthy
     networks:
       - linebk-net
+  
+  web:
+    container_name: linebk-web
+    build:
+      context: linebk-web
+      dockerfile: Dockerfile.dev
+    image: linebk-web-dev:latest
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./linebk-web:/app
+    env_file:
+      - linebk-web/.env
+    depends_on:
+      - "api"
+    networks:
+      - linebk-net
 
 volumes:
   db-data:

@@ -1,0 +1,15 @@
+node_modules/
+.pnp/
+.pnp.js
+.pnpm-store/
+.yarn/install-state.gz
+.next/
+next-env.d.ts
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+cache/
+docs/
+out/
+public/
+.plop/templates/
