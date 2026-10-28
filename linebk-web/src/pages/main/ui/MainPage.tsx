@@ -106,6 +106,18 @@ export const MainPage: React.FC = () => {
 
       <div className={styles.wrap}>
         <Header />
+
+        <main className={styles.container}>
+          <div className={styles.contentWrap}>
+            <div className={styles.mainTop}>
+              <h1 className={styles.mainTopTit}>
+                {state.userInfo
+                  ? state.userInfo.greetingMessage
+                  : 'Have a nice day Name'}
+              </h1>
+            </div>
+          </div>
+        </main>
       </div>
     </>
   );
