@@ -1,0 +1,50 @@
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 44px;
+  background: #fff;
+
+  &Lft {
+    position: absolute;
+    top: 7px;
+    left: 10px;
+    height: 30px;
+  }
+
+  &Rgt {
+    width: 30px;
+    height: 30px;
+    margin: 0 10px;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+  }
+
+  &Menu {
+    background-image: url(../../../shared/assets/img/menu.png);
+    background-size: contain;
+    width: 24px;
+    height: 24px;
+  }
+
+  &Cxl {
+    background-image: url(../../../shared/assets/img/x.png);
+    background-size: contain;
+    width: 24px;
+    height: 24px;
+  }
+}
+
+.blind {
+  margin: -1px !important;
+  padding: 0 !important;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  position: absolute;
+}
