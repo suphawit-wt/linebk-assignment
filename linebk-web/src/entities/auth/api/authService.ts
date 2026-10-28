@@ -30,6 +30,9 @@ interface AuthServiceInterface {
 }
 
 export class AuthService implements AuthServiceInterface {
+  private static isRefreshing = false;
+  private static refreshPromise: Promise<string> | null = null;
+
   async signInWithPasscode(id: string, passcode: string): Promise<string> {
     try {
       const { data } = await apiClient.post<ApiResponseWithData<TokenResponse>>(
@@ -95,28 +98,38 @@ export class AuthService implements AuthServiceInterface {
   }
 
   async refreshToken(): Promise<string> {
-    try {
-      const { data } = await apiClient.post<ApiResponseWithData<TokenResponse>>(
-        `v1/${API_PREFIX}/refresh`,
-        {},
-        { withCredentials: true },
-      );
-      return data.data.accessToken;
-    } catch (error: unknown) {
-      if (axios.isAxiosError(error) && error.response) {
-        const { status, message } = error.response.data as ApiResponse;
-
-        switch (status) {
-          case ApiStatus.BadRequest:
-            throw new BadRequestError(message);
-          case ApiStatus.Unauthorized:
-            throw new UnauthorizedError(message);
-          default:
-            throw new UnexpectedError();
-        }
-      }
-
-      throw new UnexpectedError();
+    if (AuthService.isRefreshing && AuthService.refreshPromise) {
+      return AuthService.refreshPromise;
     }
+
+    AuthService.isRefreshing = true;
+    AuthService.refreshPromise = (async () => {
+      try {
+        const { data } = await apiClient.post<
+          ApiResponseWithData<TokenResponse>
+        >(`v1/${API_PREFIX}/refresh`, {}, { withCredentials: true });
+        return data.data.accessToken;
+      } catch (error: unknown) {
+        if (axios.isAxiosError(error) && error.response) {
+          const { status, message } = error.response.data as ApiResponse;
+
+          switch (status) {
+            case ApiStatus.BadRequest:
+              throw new BadRequestError(message);
+            case ApiStatus.Unauthorized:
+              throw new UnauthorizedError(message);
+            default:
+              throw new UnexpectedError();
+          }
+        }
+
+        throw new UnexpectedError();
+      } finally {
+        AuthService.isRefreshing = false;
+        AuthService.refreshPromise = null;
+      }
+    })();
+
+    return AuthService.refreshPromise;
   }
 }
