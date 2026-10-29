@@ -1,0 +1,230 @@
+.mainAcc {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 150px;
+  margin-bottom: 10px;
+  border-radius: 10px;
+  background: #24c875;
+  color: #fff;
+  box-sizing: border-box;
+
+  &Large {
+    min-height: 274px;
+
+    .mainAccTop {
+      padding: 25px 22px 22px;
+    }
+  }
+
+  &Top {
+    font-size: 0;
+  }
+
+  &Bottom {
+    position: relative;
+  }
+
+  &LinkBox {
+    position: relative;
+    max-height: 70px;
+    background: #24c875;
+    border-radius: 0 0 10px 10px;
+  }
+
+  &LinkItem {
+    display: flex;
+    align-items: center;
+    background-color: rgba(0, 0, 0, 0.03);
+    border-top: 1px solid rgba(0, 0, 0, 0.02);
+    border-radius: 0 0 10px 10px;
+  }
+
+  &Name {
+    overflow: hidden;
+    display: block;
+    padding-right: 20px;
+    font-size: 1.8rem;
+    line-height: 2.8rem;
+    font-weight: 700;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  &Amount {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 3.4rem;
+    line-height: normal;
+    font-weight: 600;
+    text-indent: -1px;
+  }
+
+  &Detail {
+    display: block;
+    padding-right: 40px;
+    font-size: 1.3rem;
+    line-height: normal;
+    opacity: 0.7;
+
+    &Num {
+      padding: 0;
+    }
+
+    & + & {
+      margin-top: 1px;
+    }
+  }
+
+  &Flag {
+    display: inline-block;
+    margin: 5px 4px 0 0;
+    padding: 3px 7px;
+    border-radius: 5px;
+    background-color: rgba(0, 0, 0, 0.1);
+    font-size: 1.1rem;
+    line-height: 1.3rem;
+    font-weight: 700;
+    color: #fff;
+
+    &Lock {
+      position: relative;
+      padding-left: 22px;
+    }
+  }
+
+  &Link {
+    display: inline-block;
+    position: relative;
+    min-width: 33.3%;
+    padding: 14px 0;
+    font-size: 1.2rem;
+    line-height: 1.4rem;
+    font-weight: 700;
+    color: #fff;
+    text-align: center;
+    text-decoration: none;
+
+    &::before {
+      display: block;
+      margin: 0 auto 4px;
+      content: '';
+      background-size: contain;
+    }
+
+    &Qr::before {
+      background-image: url('../../../shared/assets/img/qr-scan.png');
+      width: 24px;
+      height: 24px;
+    }
+
+    &Addmoney::before {
+      background-image: url('../../../shared/assets/img/wallet.png');
+      width: 24px;
+      height: 24px;
+    }
+
+    &Withdrawal::before {
+      background-image: url('../../../shared/assets/img/transfer.png');
+      width: 24.5px;
+      height: 24px;
+    }
+  }
+
+  /* Three dots action menu button */
+  &More {
+    position: absolute;
+    top: 24px;
+    right: 11px;
+    width: 24px;
+    height: 24px;
+    background-image: url('../../../shared/assets/img/dots.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    cursor: pointer;
+    border: none;
+    background-color: transparent;
+
+    &Small {
+      top: 12px;
+    }
+  }
+
+  &Act {
+    position: absolute;
+    right: 18px;
+    bottom: 18px;
+    width: 32px;
+    height: 32px;
+  }
+
+  &Circle {
+    position: absolute;
+    right: 10px;
+    bottom: 7px;
+    width: 54px;
+    height: 54px;
+
+    svg {
+      vertical-align: top;
+    }
+  }
+
+  &Num {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    font-size: 0;
+    line-height: 0;
+    white-space: nowrap;
+    transform: translate(-50%, -50%);
+
+    .percent,
+    .unit {
+      display: inline-block;
+      font-size: 1.2rem;
+      line-height: 1.4rem;
+      vertical-align: top;
+    }
+  }
+
+  &IsSmall {
+    padding: 16px 18px 18px 22px;
+
+    .mainAccName {
+      font-size: 1.6rem;
+      line-height: 2.6rem;
+      font-weight: 700;
+    }
+
+    .mainAccAmount {
+      margin-bottom: 0;
+      font-size: 3.2rem;
+      line-height: 3.8rem;
+      font-weight: 600;
+    }
+
+    .mainAccDetail {
+      padding-right: 89px;
+      font-size: 1.2rem;
+      line-height: 1.4rem;
+      opacity: 0.4;
+
+      & + & {
+        margin-top: 2px;
+      }
+    }
+  }
+}
+
+.blind {
+  margin: -1px !important;
+  padding: 0 !important;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  position: absolute;
+}

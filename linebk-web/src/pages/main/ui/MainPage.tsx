@@ -5,6 +5,7 @@ import { Header } from 'widgets/header';
 import { SplashScreen } from 'widgets/splash/ui/SplashScreen';
 
 import { AccountModel } from 'entities/account/model/types';
+import { Account } from 'entities/account/ui/Account';
 import {
   BankService,
   BannerResponse,
@@ -83,6 +84,13 @@ export const MainPage: React.FC = () => {
     };
   }, [bankService]);
 
+  const { mainAccount, subAccounts } = useMemo(() => {
+    const main =
+      state.accounts.find((a) => a.isMainAccount) || state.accounts[0] || null;
+    const subs = state.accounts.filter((a) => a !== main);
+    return { mainAccount: main, subAccounts: subs };
+  }, [state.accounts]);
+
   if (state.isLoading) {
     return <SplashScreen />;
   }
@@ -116,6 +124,12 @@ export const MainPage: React.FC = () => {
                   : 'Have a nice day Name'}
               </h1>
             </div>
+
+            {mainAccount && <Account account={mainAccount} />}
+
+            {subAccounts.map((acc, idx) => (
+              <Account account={acc} key={idx} />
+            ))}
           </div>
         </main>
       </div>
