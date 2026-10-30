@@ -13,6 +13,7 @@ import {
   RecentTransactionResponse,
   UserInfoResponse,
 } from 'entities/bank';
+import { RecentTransactionList } from 'entities/transaction/ui/RecentTransactionList';
 
 import { axiosClient } from 'shared/api';
 
@@ -126,6 +127,8 @@ export const MainPage: React.FC = () => {
             </div>
 
             {mainAccount && <Account account={mainAccount} />}
+
+            <RecentTransactionList transactions={state.transactions} />
 
             {subAccounts.map((acc, idx) => (
               <Account account={acc} key={idx} />
