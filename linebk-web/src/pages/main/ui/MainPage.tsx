@@ -138,6 +138,12 @@ export const MainPage: React.FC = () => {
             {state.banners.map((banner, idx) => (
               <Banner banner={banner} key={idx} />
             ))}
+
+            <div className={styles.mainTb}>
+              <a href="#total" className={styles.linkTo}>
+                Total Balance
+              </a>
+            </div>
           </div>
         </main>
       </div>
