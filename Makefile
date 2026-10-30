@@ -55,6 +55,7 @@ init: ## Initialize project (install dependencies, config .env files, generate V
 	fi
 	
 	@echo -e "$(CYAN)[INFO]$(RESET) Preparing Vault JWT secrets directory..."
+	@mkdir -p vault/secrets/jwt/user
 	@if [ ! -f vault/secrets/jwt/user/access_private.pem ]; then \
 		echo -e "$(CYAN)[INFO]$(RESET) Generating 2048-bit RSA key pairs for JWT authentication..."; \
 		openssl genrsa -out vault/secrets/jwt/user/access_private.pem 2048 2>/dev/null; \
