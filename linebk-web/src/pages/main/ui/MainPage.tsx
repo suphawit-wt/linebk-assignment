@@ -13,6 +13,7 @@ import {
   RecentTransactionResponse,
   UserInfoResponse,
 } from 'entities/bank';
+import { Banner } from 'entities/banner/ui/Banner';
 import { RecentTransactionList } from 'entities/transaction/ui/RecentTransactionList';
 
 import { axiosClient } from 'shared/api';
@@ -132,6 +133,10 @@ export const MainPage: React.FC = () => {
 
             {subAccounts.map((acc, idx) => (
               <Account account={acc} key={idx} />
+            ))}
+
+            {state.banners.map((banner, idx) => (
+              <Banner banner={banner} key={idx} />
             ))}
           </div>
         </main>
