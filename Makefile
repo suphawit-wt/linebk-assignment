@@ -16,6 +16,21 @@ init: ## Initialize project (install dependencies, config .env files, generate V
 
 	@echo -e "$(CYAN)[INFO]$(RESET) Installing linebk-web Node modules..."
 	@cd linebk-web && pnpm install
+
+	@echo -e "$(CYAN)[INFO]$(RESET) Checking database mock initialization scripts..."
+	@if [ -f db-init/13_account_flags.sql ]; then \
+		echo -e "$(YELLOW)[SKIP]$(RESET) 13_account_flags.sql already exists in db-init/, skipping extraction."; \
+	elif [ -f db_mock.zip ]; then \
+		mkdir -p db-init; \
+		if command -v unzip &> /dev/null; then \
+			unzip -o -j db_mock.zip -d db-init/ > /dev/null; \
+			echo -e "$(GREEN)[SUCCESS]$(RESET) Extracted db_mock.zip directly into db-init/"; \
+		else \
+			echo -e "$(RED)[WARNING]$(RESET) 'unzip' command not found. Please install unzip to extract db_mock.zip."; \
+		fi; \
+	else \
+		echo -e "$(YELLOW)[SKIP]$(RESET) db_mock.zip not found in root, skipping extraction."; \
+	fi
 	
 	@echo -e "$(CYAN)[INFO]$(RESET) Configuring environment files..."
 	@if [ -f .env.example ] && [ ! -f .env ]; then \

@@ -16,13 +16,15 @@ A Banking service delivering high-concurrency performance (capable of **3,700+ R
 
 ## 🚀 Setup & Getting Started
 
-To initialize the project environment on a freshly cloned repository, run:
+1. Download the database mock initialization archive (`db_mock.zip`) from [Google Drive](https://drive.google.com/file/d/1jH3pbXwBbRU23e_aBBSYfomSvOVkXgov/view?usp=sharing) and place it directly into the **project root directory**.
+
+2. To initialize the project environment on a freshly cloned repository, run:
 
 ```bash
 make init
 ```
 
-Once initialized, spin up the full stack containers in the background by running:
+3. Once initialized, spin up the full stack containers in the background by running:
 ```bash
 make up
 ```

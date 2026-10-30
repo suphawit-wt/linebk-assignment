@@ -3,6 +3,9 @@
 
 node_modules/
 
+db-init/0[2-9]_*.sql
+db-init/1[0-3]_*.sql
+
 *.pem
 *.crt
 
