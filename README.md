@@ -22,6 +22,15 @@ To initialize the project environment on a freshly cloned repository, run:
 make init
 ```
 
+Once initialized, spin up the full stack containers in the background by running:
+```bash
+make up
+```
+
+### Accessing the Application
+* **React Frontend:** Open your browser and navigate to **[http://localhost:3000](http://localhost:3000)** to access the LINE BK web interface. (Passcode/PIN: 123456)
+* **API / Swagger UI:** Available at **[http://localhost:8080/swagger/index.html](http://localhost:8080/swagger/index.html)**.
+
 ### Prerequisites
 * **Homebrew** (`brew`) — *(used during `make init` to install `k6` if missing)*
 * **Go**
