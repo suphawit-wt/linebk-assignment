@@ -1,0 +1,133 @@
+.debitSwipeWrap {
+  overflow-y: hidden;
+  margin: 0 -20px; // Matches container padding alignment
+  width: calc(100% + 40px);
+}
+
+.debitSwipeInner {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -ms-overflow-style: none;
+  scrollbar-width: none; /* Firefox */
+  -webkit-overflow-scrolling: touch;
+
+  &::-webkit-scrollbar {
+    display: none; /* Safari and Chrome */
+  }
+}
+
+.debitSwipeLst {
+  display: flex;
+  align-items: center;
+  gap: 10px; /* Modern spacing between cards instead of inline margins */
+  padding: 0 20px 20px 20px; /* Left and right padding prevents edge clipping */
+  width: max-content; /* Allows items to flow naturally in a row without breaking */
+}
+
+.debitSwipeItem {
+  display: inline-flex;
+  flex-direction: column;
+  position: relative;
+  width: 240px;
+  height: 150px;
+  flex-shrink: 0; /* Prevents cards from squishing */
+  color: #fff;
+  border-radius: 10px;
+  overflow: hidden;
+  text-decoration: none;
+
+  &::after {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: 1px solid var(--border-color, transparent);
+    border-radius: 10px;
+    box-sizing: border-box;
+    content: '';
+    pointer-events: none;
+  }
+
+  &All {
+    width: 94px;
+    flex-shrink: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #f8f9fa;
+    font-size: 1.4rem;
+    line-height: 1.6rem;
+    font-weight: 700;
+    color: #c0c1c4;
+    text-align: center;
+    box-sizing: border-box;
+  }
+}
+
+.debitSwipeName {
+  position: absolute;
+  left: 22px;
+  right: 22px;
+  top: 16px;
+  font-size: 1.5rem;
+  line-height: 2.5rem;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.debitSwipeEtc {
+  display: block;
+  position: absolute;
+  left: 22px;
+  top: 42px;
+  font-size: 1.3rem;
+  line-height: 1.5rem;
+
+  &Active {
+    top: 43px;
+    font-size: 0;
+    line-height: 1.5rem;
+    opacity: 0.8;
+  }
+
+  &Num {
+    display: inline-block;
+    font-size: 1.1rem;
+    line-height: 1.5rem;
+    vertical-align: middle;
+  }
+}
+
+.debitSwipeIssue {
+  position: absolute;
+  left: 22px;
+  bottom: 22px;
+  border-radius: 10px;
+  font-size: 1rem;
+  line-height: 1.2rem;
+  opacity: 0.6;
+}
+
+/* Animations */
+.mainLoading {
+  animation: mainLoading 0.25s;
+  animation-fill-mode: backwards;
+
+  &Order6 {
+    animation-delay: 0.9s;
+  }
+}
+
+@keyframes mainLoading {
+  0% {
+    transform: translateY(80px);
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

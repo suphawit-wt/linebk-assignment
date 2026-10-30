@@ -14,6 +14,7 @@ import {
   UserInfoResponse,
 } from 'entities/bank';
 import { Banner } from 'entities/banner/ui/Banner';
+import { DebitCardSwipe } from 'entities/card/ui/DebitCardSwipe';
 import { RecentTransactionList } from 'entities/transaction/ui/RecentTransactionList';
 
 import { axiosClient } from 'shared/api';
@@ -130,6 +131,8 @@ export const MainPage: React.FC = () => {
             {mainAccount && <Account account={mainAccount} />}
 
             <RecentTransactionList transactions={state.transactions} />
+
+            <DebitCardSwipe cards={state.debitCards} />
 
             {subAccounts.map((acc, idx) => (
               <Account account={acc} key={idx} />
