@@ -49,6 +49,37 @@ jobs:
           go mod tidy
           git diff --exit-code || (echo "go.mod or go.sum is dirty. Run 'go mod tidy' locally." && exit 1)
 
+  lint-web:
+    name: React.js Linting
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: linebk-web
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 12
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: 'pnpm'
+          cache-dependency-path: 'linebk-web/pnpm-lock.yaml'
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: ESLint Check
+        run: pnpm run lint
+
+      - name: Prettier Format Check
+        run: pnpm exec prettier --check "**/*.{js,jsx,ts,tsx,json,css,md}"
+
   test:
     name: Unit Testing
     runs-on: ubuntu-latest
